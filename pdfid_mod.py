@@ -831,7 +831,7 @@ def Scan(directory, options, plugins):
 # function derived from: http://blog.9bplus.com/pdfidpy-output-to-json
 
 
-def PDFiD2JSON(xmlDoc, force):
+def PDFiD2JSON(xmlDoc):
     # Get Top Layer Data
     errorOccured = xmlDoc.documentElement.getAttribute('ErrorOccured')
     errorMessage = xmlDoc.documentElement.getAttribute('ErrorMessage')
