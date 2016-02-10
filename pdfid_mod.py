@@ -431,7 +431,7 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
     xmlDoc = xml.dom.minidom.getDOMImplementation().createDocument(
         None, 'PDFiD', None)
     XMLAddAttribute(xmlDoc, 'Version', __version__)
-    XMLAddAttribute(xmlDoc, 'Filename', file)
+    XMLAddAttribute(xmlDoc, 'Filename', os.path.basename(file))
     attErrorOccured = XMLAddAttribute(xmlDoc, 'ErrorOccured', 'False')
     attErrorMessage = XMLAddAttribute(xmlDoc, 'ErrorMessage', '')
 
