@@ -185,7 +185,9 @@ def build_obj(file, dir=''):
     # get the json decoded data
     fhashes = json.loads(get_hash_obj(file))
     fstructure = json.loads(get_structure(file))
-    fscore = json.loads(get_scores(file))
+    # TODO scoring
+    #fscore = json.loads(get_scores(file))
+    fscore = "NotImplemented"
     fvt = json.loads(get_vt_obj(vt_hash))
     fcontents = json.loads(get_contents_obj(file))
 #	frelated = json.loads(get_related_files(file))
