@@ -15,11 +15,79 @@ import related_entropy
 import hashlib
 import hash_maker
 import optparse
-import pymongo
-import MySQLdb
+#import MySQLdb
 import traceback
-from pymongo import Connection
 
+def main():
+    oParser = optparse.OptionParser(
+        usage='usage: %prog [options]\n' + __description__, version='%prog ' + __version__)
+    oParser.add_option('-f', '--file', default='',
+                       type='string', help='file to build an object from')
+    oParser.add_option('-d', '--dir', default='',
+                       type='string', help='dir to build an object from')
+    oParser.add_option('-m', '--mongo', action='store_true',
+                       default=False, help='dump to a mongodb database')
+    oParser.add_option(
+        '-v', '--verbose', action='store_true', default=False, help='verbose outpout')
+    oParser.add_option(
+        '-l', '--log', action='store_true', default=False, help='log errors to file')
+    (options, args) = oParser.parse_args()
+
+    if options.log:
+        log = open("error_log", 'w')
+
+    if options.mongo:
+        try:
+            import pymongo
+            from pymongo import Connection
+        except:
+            print("Install mongodb before to use it")
+            sys.exit()
+        con = connect_to_mongo("localhost", 27017, "pdfs", "malware")
+
+        # file assumes the following: absolute path, filename is "hash.pdf.vir"
+    if options.file:
+        output = build_obj(options.file)
+        if options.mongo:
+            con.insert(json.loads(output))
+        if options.verbose:
+            print output
+    elif options.dir:
+        files = []
+        dirlist = os.listdir(options.dir)
+        for fname in dirlist:
+            files.append(fname)
+        files.sort()
+        count = 0
+
+        for file in files:
+            if count == 20:
+                if options.verbose:
+                    print "Sleeping for 5 minutes"
+                time.sleep(300)
+                count = 0
+            else:
+                hash = hash_maker.get_hash_data(options.dir + file, "md5")
+                pres = con.find({"hash_data.file.md5": hash}).count()
+                if pres != 1:
+                    output = build_obj(file, options.dir)
+                    if options.mongo:
+                        try:
+                            con.insert(json.loads(output))
+                            if options.verbose:
+                                print file + " inserted"
+                        except:
+                            print "Something went wrong with" + file
+                            traceback.print_exc()
+                            if options.log:
+                                log.write("ERROR: " + file + "\n")
+                    count += 1
+        if options.log:
+            log.close()
+
+    else:
+        oParser.print_help()
+        return
 
 def get_vt_obj(file):
     key = 'YOUR_API_KEY'
@@ -93,13 +161,13 @@ def connect_to_mongo(host, port, database, collection):
     return collection
 
 
-def connect_database(host, user, password, database):  # 9b+
-    try:
-        conn = MySQLdb.connect(host, user, password, database)
-        return conn
-    except MySQLdb.Error, e:
-        print "Error %d: %s" % (e.args[0], e.args[1])
-        sys.exit(1)
+#def connect_database(host, user, password, database):  # 9b+
+#    try:
+#        conn = MySQLdb.connect(host, user, password, database)
+#        return conn
+#    except MySQLdb.Error, e:
+#        print "Error %d: %s" % (e.args[0], e.args[1])
+#        sys.exit(1)
 
 
 def kill_database_connection(conn):  # 9b+
@@ -128,71 +196,6 @@ def build_obj(file, dir=''):
             {"virustotal": fvt, "wepawet": "null"}, "contents": fcontents, 'related': frelated}
     return json.dumps(fobj)
 
-
-def main():
-    oParser = optparse.OptionParser(
-        usage='usage: %prog [options]\n' + __description__, version='%prog ' + __version__)
-    oParser.add_option('-f', '--file', default='',
-                       type='string', help='file to build an object from')
-    oParser.add_option('-d', '--dir', default='',
-                       type='string', help='dir to build an object from')
-    oParser.add_option('-m', '--mongo', action='store_true',
-                       default=False, help='dump to a mongodb database')
-    oParser.add_option(
-        '-v', '--verbose', action='store_true', default=False, help='verbose outpout')
-    oParser.add_option(
-        '-l', '--log', action='store_true', default=False, help='log errors to file')
-    (options, args) = oParser.parse_args()
-
-    if options.log:
-        log = open("error_log", 'w')
-
-    if options.mongo:
-        con = connect_to_mongo("localhost", 27017, "pdfs", "malware")
-
-        # file assumes the following: absolute path, filename is "hash.pdf.vir"
-    if options.file:
-        output = build_obj(options.file)
-        if options.mongo:
-            con.insert(json.loads(output))
-        if options.verbose:
-            print output
-    elif options.dir:
-        files = []
-        dirlist = os.listdir(options.dir)
-        for fname in dirlist:
-            files.append(fname)
-        files.sort()
-        count = 0
-
-        for file in files:
-            if count == 20:
-                if options.verbose:
-                    print "Sleeping for 5 minutes"
-                time.sleep(300)
-                count = 0
-            else:
-                hash = hash_maker.get_hash_data(options.dir + file, "md5")
-                pres = con.find({"hash_data.file.md5": hash}).count()
-                if pres != 1:
-                    output = build_obj(file, options.dir)
-                    if options.mongo:
-                        try:
-                            con.insert(json.loads(output))
-                            if options.verbose:
-                                print file + " inserted"
-                        except:
-                            print "Something went wrong with" + file
-                            traceback.print_exc()
-                            if options.log:
-                                log.write("ERROR: " + file + "\n")
-                    count += 1
-        if options.log:
-            log.close()
-
-    else:
-        oParser.print_help()
-        return
 
 if __name__ == '__main__':
     main()

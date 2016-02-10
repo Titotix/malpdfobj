@@ -16,7 +16,6 @@ import os.path
 import sys
 import hashlib
 import urllib
-import MySQLdb
 import random
 import simplejson as json
 
