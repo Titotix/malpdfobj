@@ -575,17 +575,14 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
         attCountStream.nodeValue = ''
         attEntropyNonStream.nodeValue = ''
         attCountNonStream.nodeValue = ''
-    attCountEOF = xmlDoc.createAttribute('CountEOF')
-    xmlDoc.documentElement.setAttributeNode(attCountEOF)
-    attCountCharsAfterLastEOF = xmlDoc.createAttribute(
-        'CountCharsAfterLastEOF')
-    xmlDoc.documentElement.setAttributeNode(attCountCharsAfterLastEOF)
     if oPDFEOF != None:
+        attCountEOF = xmlDoc.createAttribute('CountEOF')
+        xmlDoc.documentElement.setAttributeNode(attCountEOF)
+        attCountCharsAfterLastEOF = xmlDoc.createAttribute(
+            'CountCharsAfterLastEOF')
+        xmlDoc.documentElement.setAttributeNode(attCountCharsAfterLastEOF)
         attCountEOF.nodeValue = '%d' % oPDFEOF.cntEOFs
         attCountCharsAfterLastEOF.nodeValue = '%d' % oPDFEOF.cntCharsAfterLastEOF
-    else:
-        attCountEOF.nodeValue = ''
-        attCountCharsAfterLastEOF.nodeValue = ''
 
     eleKeywords = xmlDoc.createElement('Keywords')
     xmlDoc.documentElement.appendChild(eleKeywords)
