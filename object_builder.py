@@ -15,7 +15,6 @@ import related_entropy
 import hashlib
 import hash_maker
 import optparse
-#import MySQLdb
 import traceback
 
 def main():
@@ -159,15 +158,6 @@ def connect_to_mongo(host, port, database, collection):
     db = connection[database]
     collection = db[collection]
     return collection
-
-
-#def connect_database(host, user, password, database):  # 9b+
-#    try:
-#        conn = MySQLdb.connect(host, user, password, database)
-#        return conn
-#    except MySQLdb.Error, e:
-#        print "Error %d: %s" % (e.args[0], e.args[1])
-#        sys.exit(1)
 
 
 def kill_database_connection(conn):  # 9b+
