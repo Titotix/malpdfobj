@@ -867,13 +867,22 @@ def PDFiD2JSON(xmlDoc):
         date = {'name': name, 'value': value}
         dates.append(date)
 
-    data = {
-        'countEof': countEof, 'countChatAfterLastEof': countChatAfterLastEof,
-            'totalEntropy': totalEntropy, 'streamEntropy': streamEntropy,
-            'nonStreamEntropy': nonStreamEntropy, 'errorOccured': errorOccured,
-            'errorMessage': errorMessage, 'filename': filename, 'header': header,
+    data = {'errorOccured': errorOccured, 'errorMessage': errorMessage,
+            'filename': filename, 'header': header,
             'isPdf': isPdf, 'version': version, 'entropy': entropy,
             'keywords': {'keyword': keywords}, 'dates': {'date': dates}}
+
+    if countEof != "":
+        data['countEof'] = countEof
+    if countChatAfterLastEof != "":
+        data['countChatAfterLastEof'] = countChatAfterLastEof
+    if totalEntropy != "":
+        data['totalEntropy'] = totalEntropy
+    if streamEntropy != "":
+        data['streamEntropy'] = streamEntropy
+    if nonStreamEntropy != "":
+        data['nonStreamEntropy'] = nonStreamEntropy
+
     complete = [{'pdfid': data}]
     result = json.dumps(complete)
     return result
