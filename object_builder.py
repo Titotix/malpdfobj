@@ -131,9 +131,9 @@ def get_wepawet_obj():
     return "null"
 
 
-def get_structure(file, allKeywords):
+def get_structure(file, exhaustive):
     structureobj = pdfid_mod.PDFiD2JSON(
-        pdfid_mod.PDFiD(file, allKeywords, True, False, True), True)
+        pdfid_mod.PDFiD(file, exhaustive, exhaustive, False, True), True)
     return structureobj
 
 
@@ -180,7 +180,7 @@ def kill_database_connection(conn):  # 9b+
 def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False):
 
     # get the json decoded data
-    fstructure = json.loads(get_structure(malpdf, allKeywords=exhaustive))
+    fstructure = json.loads(get_structure(malpdf, exhaustive))
     fcontents = json.loads(get_contents_obj(malpdf))
     # TODO scoring
     # fscore = json.loads(get_scores(malpdf))
