@@ -15,25 +15,43 @@ import related_entropy
 import hashlib
 import hash_maker
 import argparse
-import traceback
 import logging
+
+DEFAULTDUMPFILE = "malpdfobj_out.json"
+
 
 def main():
     oParser = argparse.ArgumentParser(description=__description__)
     oParser.add_argument('malpdf', metavar="PDFfile",
-                       help='PDF file to build an object from')
-    oParser.add_argument('-f', "--file", default="malpdfobj-out.json",
-                       help='file to dump results')
-    #oParser.add_option('-d', '--dir', default='',
+                         help='PDF file to build an object from')
+    oParser.add_argument('-f', "--file",
+                         help='file to dump results')
+    # oParser.add_option('-d', '--dir', default='',
     #                   type='string', help='dir to build an object from')
     oParser.add_argument(
-        '-m', '--mongo', action='store_true',
-        default=False, help='dump to a mongodb database')
+        '-m', '--mongo', action='store_true', default=False,
+        help='dump to a mongodb database')
     oParser.add_argument(
-        '-v', '--verbose', action='store_true', default=False, help='verbose outpout')
+        '-v', '--verbose', action='store_true', default=False,
+        help='verbose log output')
     oParser.add_argument(
-        '-l', '--log', default="malpdfobj.log", help='log to provided file')
+        '-x', '--exhaustive', action='store_true', default=False,
+        help='exhaustive output of the tool')
+    oParser.add_argument(
+        '-l', '--log', action="store_true",
+        help='log to provided file')
+    oParser.add_argument(
+        '-V', '--virustotal', action='store_true', default=False,
+        help='Use VirusTotal API to get info from provided pdf')
+    oParser.add_argument(
+        '-H', '--hashes', action='store_true', default=False,
+        help='Computes hashes for provided file')
+    oParser.add_argument(
+        '-W', '--wepawet', action='store_true', default=False,
+        help='Not implemented.')
     options = oParser.parse_args()
+
+    dumpfile = options.file if options.file is not None else DEFAULTDUMPFILE
 
     log = logging.getLogger("malpdfobj")
     if options.log:
@@ -47,7 +65,8 @@ def main():
     else:
         log.setLevel(logging.INFO)
         h.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     h.setFormatter(formatter)
     log.addHandler(h)
 
@@ -60,42 +79,19 @@ def main():
             sys.exit()
         con = connect_to_mongo("localhost", 27017, "pdfs", "malware")
 
-    # file assumes the following: absolute path, filename is "hash.pdf.vir"
-    output = build_obj(options.malpdf)
+    malpdf = os.path.abspath(options.malpdf)
+
+    output = build_obj(malpdf, vt=options.virustotal,
+                       wepawet=options.wepawet, hashes=options.hashes,
+                       exhaustive=options.exhaustive)
     if options.mongo:
         con.insert(json.loads(output))
     elif options.file:
-        dumpfile = open(options.file, 'w')
-        dumpfile.write(output)
+        dump_fh = open(dumpfile, 'w')
+        dump_fh.write(output)
+        dump_fh.close()
     else:
         print(output)
-
-    #elif options.dir:
-    #    files = []
-    #    dirlist = os.listdir(options.dir)
-    #    for fname in dirlist:
-    #        files.append(fname)
-    #    files.sort()
-    #    count = 0
-
-    #    for file in files:
-    #        hash = hash_maker.get_hash_data(options.dir + file, "md5")
-    #        pres = con.find({"hash_data.file.md5": hash}).count()
-    #        if pres != 1:
-    #            output = build_obj(file, options.dir)
-    #            if options.mongo:
-    #                try:
-    #                    con.insert(json.loads(output))
-    #                    if options.verbose:
-    #                        print file + " inserted"
-    #                except:
-    #                    print "Something went wrong with" + file
-    #                    traceback.print_exc()
-    #                    if options.log:
-    #                        log.write("ERROR: " + file + "\n")
-    #            count += 1
-    #    if options.log:
-    #        log.close()
 
 
 def get_vt_obj(file):
@@ -104,6 +100,7 @@ def get_vt_obj(file):
     parameters = {"resource": file, "key": key}
     data = urllib.urlencode(parameters)
     req = urllib2.Request(url, data)
+    log.debug("VirusTotal requesting...")
     response = urllib2.urlopen(req)
     vtobj = response.read()
 
@@ -127,9 +124,16 @@ def get_vt_obj(file):
     return json.dumps(vtobj)
 
 
-def get_structure(file):
+def get_wepawet_obj():
+    # submission script exist on wepawet website, but getting result need web
+    # scrapping
+    log.error("Wepawet is not implemented")
+    return "null"
+
+
+def get_structure(file, allKeywords):
     structureobj = pdfid_mod.PDFiD2JSON(
-        pdfid_mod.PDFiD(file, True, True, False, True), True)
+        pdfid_mod.PDFiD(file, allKeywords, True, False, True), True)
     return structureobj
 
 
@@ -145,8 +149,6 @@ def get_object_details(file):
 
 
 def get_hash_obj(file):
-    # objs = json.loads(get_object_details(file)) #decode because data needs
-    # to be re-encoded
     hashes = hash_maker.get_hash_object(file)
     data = {'file': hashes}
     return json.dumps(data)
@@ -175,27 +177,32 @@ def kill_database_connection(conn):  # 9b+
     conn.close()
 
 
-def build_obj(file, dir=''):
-
-    if dir != '':
-        file = dir + file
-
-    vt_hash = hash_maker.get_hash_data(file, "md5")
+def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False):
 
     # get the json decoded data
-    fhashes = json.loads(get_hash_obj(file))
-    fstructure = json.loads(get_structure(file))
+    fstructure = json.loads(get_structure(malpdf, allKeywords=exhaustive))
+    fcontents = json.loads(get_contents_obj(malpdf))
     # TODO scoring
-    #fscore = json.loads(get_scores(file))
+    # fscore = json.loads(get_scores(malpdf))
     fscore = "NotImplemented"
-    fvt = json.loads(get_vt_obj(vt_hash))
-    fcontents = json.loads(get_contents_obj(file))
-#	frelated = json.loads(get_related_files(file))
-    frelated = "null"
+    # TODO related
+    # frelated = json.loads(get_related_files(malpdf))
+    frelated = "NotImplemented"
 
     # build the object and then re-encode
-    fobj = {"hash_data": fhashes, "structure": fstructure, "scores": fscore, "scans":
-            {"virustotal": fvt, "wepawet": "null"}, "contents": fcontents, 'related': frelated}
+    fobj = {"structure": fstructure, "scores": fscore, "scans":
+            {}, "contents": fcontents, "related": frelated}
+    if vt:
+        vt_hash = hash_maker.get_hash_data(malpdf, "md5")
+        fvt = json.loads(get_vt_obj(vt_hash))
+        fobj["scans"]["virustotal"] = fvt
+    if wepawet:
+        fwepawet = json.loads(get_wepawet_obj())
+        fobj["scans"]["wepawet"] = fwepawet
+    if hashes:
+        fhashes = json.loads(get_hash_obj(malpdf))
+        fobj["hash_data"] = fhashes
+
     return json.dumps(fobj)
 
 
