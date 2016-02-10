@@ -133,7 +133,7 @@ def get_wepawet_obj():
 
 def get_structure(file, exhaustive):
     structureobj = pdfid_mod.PDFiD2JSON(
-        pdfid_mod.PDFiD(file, exhaustive, exhaustive, False, True), True)
+        pdfid_mod.PDFiD(file, exhaustive, exhaustive, False, True))
     return structureobj
 
 
