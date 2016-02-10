@@ -41,6 +41,9 @@ def main():
         '-l', '--log', action="store_true",
         help='log to provided file')
     oParser.add_argument(
+        '-X', '--hexa', action='store_true', default=False,
+        help='Provide also streams in hexadecimal representations')
+    oParser.add_argument(
         '-V', '--virustotal', action='store_true', default=False,
         help='Use VirusTotal API to get info from provided pdf')
     oParser.add_argument(
@@ -83,7 +86,7 @@ def main():
 
     output = build_obj(malpdf, vt=options.virustotal,
                        wepawet=options.wepawet, hashes=options.hashes,
-                       exhaustive=options.exhaustive)
+                       exhaustive=options.exhaustive, hexa=options.hexa)
     if options.mongo:
         con.insert(json.loads(output))
     elif options.file:
@@ -154,8 +157,8 @@ def get_hash_obj(file):
     return json.dumps(data)
 
 
-def get_contents_obj(file):
-    objcontents = json.loads(parser_contents2json.contents(file))
+def get_contents_obj(file, hexa):
+    objcontents = json.loads(parser_contents2json.contents(file, hexa))
     data = {'objects': objcontents}
     return json.dumps(data)
 
@@ -177,11 +180,12 @@ def kill_database_connection(conn):  # 9b+
     conn.close()
 
 
-def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False):
+def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
+              hexa=False):
 
     # get the json decoded data
     fstructure = json.loads(get_structure(malpdf, exhaustive))
-    fcontents = json.loads(get_contents_obj(malpdf))
+    fcontents = json.loads(get_contents_obj(malpdf, hexa))
     # TODO scoring
     # fscore = json.loads(get_scores(malpdf))
     fscore = "NotImplemented"

@@ -2,7 +2,7 @@ import pdfparser
 import simplejson as json
 
 
-def contents(file):
+def contents(file, hexa):
     PDF_ELEMENT_INDIRECT_OBJECT = 2
     oPDFParser = pdfparser.cPDFParser(file)
     cntComment = 0
@@ -23,7 +23,7 @@ def contents(file):
         object = oPDFParser.GetObject()
         if object != None:
             if object.type == PDF_ELEMENT_INDIRECT_OBJECT and selectIndirectObject:
-                content_json_objs.append(pdfparser.content2JSON(object))
+                content_json_objs.append(pdfparser.content2JSON(object, hexa))
         else:
             break
 

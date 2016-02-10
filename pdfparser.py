@@ -1113,7 +1113,7 @@ def File2Strings(filename):
         f.close()
 
 
-def content2JSON(obj):
+def content2JSON(obj, hexa=False):
     id = obj.id
     filtered = obj.Stream()
     encoded = unicode(FormatOutput(obj.content, True), errors='replace')
@@ -1126,8 +1126,6 @@ def content2JSON(obj):
     raw_content = FormatOutput(obj.content, True)
     length = len(raw_content)
     md5 = hashlib.md5(raw_content).hexdigest()
-    #TODO hex as optionnal
-    #hex = ByteToHex(raw_content)
     suspicious = 0
     strings = ['printf', 'collab', 'function',
                'eval', 'flash', 'util', 'unescape']
@@ -1139,13 +1137,26 @@ def content2JSON(obj):
         if re.search(s, decoded):
             suspicious = 1
 
-#  if length > 700:
-#      suspicious = 1
-
     jobject = {'id': id, 'version': version, 'length': length, 'md5': md5,
                'encoded': encoded, 'decoded': decoded, 'suspicious': suspicious}
-    #jobject["hex"] = hex
+
+    if hexa:
+        hex = ByteToHex(raw_content)
+        jobject["hex"] = hex
+
     return jobject
+
+
+def ByteToHex(byteStr):
+    return ''.join(["%02X " % ord(x) for x in byteStr]).strip()
+
+
+def HexToByte(hexStr):
+    bytes = []
+    hexStr = ''.join(hexStr.split(" "))
+    for i in range(0, len(hexStr), 2):
+        bytes.append(chr(int(hexStr[i:i + 2], 16)))
+    return ''.join(bytes)
 
 
 def ProcessAt(argument):
