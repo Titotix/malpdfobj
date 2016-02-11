@@ -18,7 +18,7 @@ import logging
 
 DEFAULTDUMPFILE = "malpdfobj_out.json"
 
-
+VIRUSTOTAL_API_KEY = "YOUR_VT_KEY"
 PDF_ELEMENT_INDIRECT_OBJECT = 2
 
 def main():
@@ -57,6 +57,7 @@ def main():
 
     dumpfile = options.file if options.file is not None else DEFAULTDUMPFILE
 
+    global log
     log = logging.getLogger("malpdfobj")
     if options.log:
         h = logging.FileHandler(options.log, mode='w')
@@ -99,9 +100,11 @@ def main():
 
 
 def get_vt_obj(file):
-    key = 'YOUR_API_KEY'
+    if VIRUSTOTAL_API_KEY == "YOUR_VT_KEY":
+        log.error("Setup your VirusToal API key at the beginning of the script")
+        return json.dumps({})
     url = "https://www.virustotal.com/api/get_file_report.json"
-    parameters = {"resource": file, "key": key}
+    parameters = {"resource": file, "key": VIRUSTOTAL_API_KEY}
     data = urllib.urlencode(parameters)
     req = urllib2.Request(url, data)
     log.debug("VirusTotal requesting...")
@@ -123,6 +126,7 @@ def get_vt_obj(file):
         vtobj = {'report': {'last_scan': last_scan, 'permalink':
                             permalink, 'results': {'scanners': scanners}}}
     else:
+        log.error("VirusTotal requests did not give results")
         vtobj = {'report': {'results': {'scanners': []}}}
 
     return json.dumps(vtobj)
