@@ -345,7 +345,7 @@ def UpdateWords(word, wordExact, slash, words, hexcode, allNames, lastName, insi
                         oEntropy.removeInsideStream(ord(char))
                 insideStream = False
         if fOut != None:
-            if slash == '/' and '/' + word in ('/JS', '/JavaScript', '/AA', '/OpenAction', '/JBIG2Decode', '/RichMedia', '/Launch'):
+            if slash == '/' and '/' + word in ('/JS', '/JavaScript', '/AA', '/OpenAction', '/JBIG2Decode', '/RichMedia', '/Launch', '/XFA', '/AcroForm', '/EmbeddedFile', '/ObjStm'):
                 wordExactSwapped = HexcodeName2String(SwapName(wordExact))
                 fOut.write(C2BIP3(wordExactSwapped))
                 print('/%s -> /%s' %
@@ -481,7 +481,11 @@ def PDFiD(file, allNames=False, extraData=False, disarm=False, force=False):
                 d1 = oBinaryFile.byte()
                 if d1 != None:
                     d2 = oBinaryFile.byte()
-                    if d2 != None and (chr(d1) >= '0' and chr(d1) <= '9' or chr(d1).upper() >= 'A' and chr(d1).upper() <= 'F') and (chr(d2) >= '0' and chr(d2) <= '9' or chr(d2).upper() >= 'A' and chr(d2).upper() <= 'F'):
+
+                    # Test if d1 and d2 are an hexa code
+                    if d2 != None and\
+                            (chr(d1) >= '0' and chr(d1) <= '9' or chr(d1).upper() >= 'A' and chr(d1).upper() <= 'F') and\
+                            (chr(d2) >= '0' and chr(d2) <= '9' or chr(d2).upper() >= 'A' and chr(d2).upper() <= 'F'):
                         word += chr(int(chr(d1) + chr(d2), 16))
                         wordExact.append(int(chr(d1) + chr(d2), 16))
                         hexcode = True
