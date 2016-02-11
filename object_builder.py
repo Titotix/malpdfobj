@@ -8,7 +8,6 @@ import urllib
 import urllib2
 import os
 import time
-import parser_hash2json
 import pdfparser
 import pdfid_mod
 import related_entropy
@@ -146,12 +145,6 @@ def get_scores(file):
     scoreobj = pdfid_mod.Score2JSON(
         pdfid_mod.PDFiD(file, False, True, False, True))
     return scoreobj
-
-
-# C'est quoi cette fonction qui sert a RIEN !!
-def get_object_details(file):
-    objdetails = parser_hash2json.conversion(file)
-    return objdetails
 
 
 def get_hash_obj(file):
