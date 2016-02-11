@@ -15,6 +15,7 @@ import hashlib
 import hash_maker
 import argparse
 import logging
+import sys
 
 DEFAULTDUMPFILE = "malpdfobj_out.json"
 
@@ -26,7 +27,7 @@ def main():
     oParser.add_argument('malpdf', metavar="PDFfile",
                          help='PDF file to build an object from')
     oParser.add_argument('-f', "--file",
-                         help='file to dump results')
+                         help='file to dump results in JSON format')
     # oParser.add_option('-d', '--dir', default='',
     #                   type='string', help='dir to build an object from')
     oParser.add_argument(
@@ -80,7 +81,7 @@ def main():
             import pymongo
             from pymongo import Connection
         except:
-            log.error("Install mongodb before to use it")
+            log.error("Install mongodb before to use it. Exit.")
             sys.exit()
         con = connect_to_mongo("localhost", 27017, "pdfs", "malware")
 
@@ -90,10 +91,10 @@ def main():
                        wepawet=options.wepawet, hashes=options.hashes,
                        exhaustive=options.exhaustive, hexa=options.hexa)
     if options.mongo:
-        con.insert(json.loads(output))
+        con.insert(output)
     elif options.file:
         dump_fh = open(dumpfile, 'w')
-        dump_fh.write(output)
+        dump_fh.write(json.dumps(output))
         dump_fh.close()
     else:
         print(output)
@@ -102,7 +103,7 @@ def main():
 def get_vt_obj(file):
     if VIRUSTOTAL_API_KEY == "YOUR_VT_KEY":
         log.error("Setup your VirusToal API key at the beginning of the script")
-        return json.dumps({})
+        return {}
     url = "https://www.virustotal.com/api/get_file_report.json"
     parameters = {"resource": file, "key": VIRUSTOTAL_API_KEY}
     data = urllib.urlencode(parameters)
@@ -129,7 +130,7 @@ def get_vt_obj(file):
         log.error("VirusTotal requests did not give results")
         vtobj = {'report': {'results': {'scanners': []}}}
 
-    return json.dumps(vtobj)
+    return vtobj
 
 
 def get_wepawet_obj():
@@ -153,14 +154,11 @@ def get_scores(file):
 
 def get_hash_obj(file):
     hashes = hash_maker.get_hash_object(file)
-    data = {'file': hashes}
-    return json.dumps(data)
+    return {'file': hashes}
 
 
 def get_contents_obj(file, hexa):
-    objcontents = json.loads(get_contents(file, hexa))
-    data = {'objects': objcontents}
-    return json.dumps(data)
+    return {'objects': get_contents(file, hexa)}
 
 def get_contents(file, hexa):
     oPDFParser = pdfparser.cPDFParser(file)
@@ -174,14 +172,11 @@ def get_contents(file, hexa):
         else:
             break
 
-    data = {'object': content_json_objs}
-    result = json.dumps(data)
-    return result
+    return {'object': content_json_objs}
 
 
 def get_related_files(file):
-    related_results = related_entropy.shot_caller(file)
-    return json.dumps(related_results)
+    return related_entropy.shot_caller(file)
 
 
 def connect_to_mongo(host, port, database, collection):
@@ -201,7 +196,7 @@ def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
 
     # get the json decoded data
     fstructure = json.loads(get_structure(malpdf, exhaustive))
-    fcontents = json.loads(get_contents_obj(malpdf, hexa))
+    fcontents = get_contents_obj(malpdf, hexa)
     # TODO scoring
     # fscore = json.loads(get_scores(malpdf))
     fscore = "NotImplemented"
@@ -214,16 +209,13 @@ def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
             {}, "contents": fcontents, "related": frelated}
     if vt:
         vt_hash = hash_maker.get_hash_data(malpdf, "md5")
-        fvt = json.loads(get_vt_obj(vt_hash))
-        fobj["scans"]["virustotal"] = fvt
+        fobj["scans"]["virustotal"] = get_vt_obj(vt_hash)
     if wepawet:
-        fwepawet = json.loads(get_wepawet_obj())
-        fobj["scans"]["wepawet"] = fwepawet
+        fobj["scans"]["wepawet"] = get_wepawet_obj()
     if hashes:
-        fhashes = json.loads(get_hash_obj(malpdf))
-        fobj["hash_data"] = fhashes
+        fobj["hash_data"] = get_hash_obj(malpdf)
 
-    return json.dumps(fobj)
+    return fobj
 
 if __name__ == '__main__':
     main()
