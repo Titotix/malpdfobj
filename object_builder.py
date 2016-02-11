@@ -153,27 +153,31 @@ def get_scores(file):
 
 
 def get_hash_obj(file):
-    hashes = hash_maker.get_hash_object(file)
-    return {'file': hashes}
+    return hash_maker.get_hash_object(file)
 
 
 def get_contents_obj(file, hexa):
-    return {'objects': get_contents(file, hexa)}
+    return {'objects': get_indirect_objects(file, hexa)}
 
-def get_contents(file, hexa):
+
+def get_indirect_objects(file, hexa):
     oPDFParser = pdfparser.cPDFParser(file)
-    content_json_objs = []
+    indirect_objects = []
 
     while True:
         object = oPDFParser.GetObject()
         if object != None:
             if object.type == PDF_ELEMENT_INDIRECT_OBJECT:
-                content_json_objs.append(pdfparser.content2JSON(object, hexa))
+                indirect_objects.append(pdfparser.content2JSON(object, hexa))
         else:
             break
 
-    return {'object': content_json_objs}
+    return indirect_objects
 
+
+def filter_suspect_objects(indirect_objects, suspect_keywords):
+
+    
 
 def get_related_files(file):
     return related_entropy.shot_caller(file)
@@ -213,7 +217,7 @@ def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
     if wepawet:
         fobj["scans"]["wepawet"] = get_wepawet_obj()
     if hashes:
-        fobj["hash_data"] = get_hash_obj(malpdf)
+        fobj["hash"] = get_hash_obj(malpdf)
 
     return fobj
 
