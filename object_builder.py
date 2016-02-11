@@ -19,8 +19,20 @@ import sys
 
 DEFAULTDUMPFILE = "malpdfobj_out.json"
 
+SUSPECT_KEYWORDS = ('/ObjStm',
+                    '/JS',
+                    '/JavaScript',
+                    '/AA',
+                    '/OpenAction',
+                    '/AcroForm',
+                    '/JBIG2Decode',
+                    '/RichMedia',
+                    '/Launch',
+                    '/EmbeddedFile',
+                    '/XFA')
 VIRUSTOTAL_API_KEY = "YOUR_VT_KEY"
 PDF_ELEMENT_INDIRECT_OBJECT = 2
+
 
 def main():
     oParser = argparse.ArgumentParser(description=__description__)
@@ -54,6 +66,9 @@ def main():
     oParser.add_argument(
         '-W', '--wepawet', action='store_true', default=False,
         help='Not implemented.')
+    oParser.add_argument(
+        '-a', '--all', action='store_true', default=False,
+        help='Dump all objects from PDF (Implies high volume of ouput)')
     options = oParser.parse_args()
 
     dumpfile = options.file if options.file is not None else DEFAULTDUMPFILE
@@ -89,7 +104,8 @@ def main():
 
     output = build_obj(malpdf, vt=options.virustotal,
                        wepawet=options.wepawet, hashes=options.hashes,
-                       exhaustive=options.exhaustive, hexa=options.hexa)
+                       exhaustive=options.exhaustive, hexa=options.hexa,
+                       allobjects=options.all)
     if options.mongo:
         con.insert(output)
     elif options.file:
@@ -102,7 +118,8 @@ def main():
 
 def get_vt_obj(file):
     if VIRUSTOTAL_API_KEY == "YOUR_VT_KEY":
-        log.error("Setup your VirusToal API key at the beginning of the script")
+        log.error(
+            "Setup your VirusToal API key at the beginning of the script")
         return {}
     url = "https://www.virustotal.com/api/get_file_report.json"
     parameters = {"resource": file, "key": VIRUSTOTAL_API_KEY}
@@ -157,10 +174,11 @@ def get_hash_obj(file):
 
 
 def get_contents_obj(file, hexa):
-    return {'objects': get_indirect_objects(file, hexa)}
+    return {'objects': get_indirect_objects2json(file, hexa)}
 
 
-def get_indirect_objects(file, hexa):
+# TODO this function should use get_indirect_objects()
+def get_indirect_objects2json(file, hexa):
     oPDFParser = pdfparser.cPDFParser(file)
     indirect_objects = []
 
@@ -175,9 +193,59 @@ def get_indirect_objects(file, hexa):
     return indirect_objects
 
 
-def filter_suspect_objects(indirect_objects, suspect_keywords):
+def obj2json(obj, hexa):
+    return pdfparser.content2JSON(obj, hexa)
 
-    
+
+def get_indirect_objects(file):
+    oPDFParser = pdfparser.cPDFParser(file)
+    indirect_objects = []
+
+    while True:
+        object = oPDFParser.GetObject()
+        if object != None:
+            if object.type == PDF_ELEMENT_INDIRECT_OBJECT:
+                indirect_objects.append(object)
+        else:
+            break
+
+    return indirect_objects
+
+
+def filter_suspect_objects(indirect_objects, suspect_keywords):
+    suspect_objects = []
+    raw_results = []
+    json_results = []
+    for obj in indirect_objects:
+        for word in suspect_keywords:
+            if obj.Contains(word):
+                suspect_objects.append(obj)
+
+    for obj in suspect_objects:
+        references = obj.GetReferences()
+        refarray = []
+        for ref in references:
+            refarray.append(ref)
+        raw_results.append({"suspect_obj": obj, "references": refarray})
+        json_results.append({"suspect_obj": obj2json(obj, False), "references": refarray})
+
+    return json_results, raw_results
+
+
+# TODO object from GetReferences are not xmlDoc so you cant content2JSON on it
+#  -> So this function does not work, ah
+def suspect_objects2json(suspect_objects):
+    results = []
+    for dicobj in suspect_objects:
+        obj = dicobj.get("suspect_obj")
+        refarray = dicobj.get("references")
+        refjson = []
+        for ref in refarray:
+            refjson.append(obj2json(ref))
+        results.append({"suspect_obj": obj2json(obj), "references": refjson})
+
+    return results
+
 
 def get_related_files(file):
     return related_entropy.shot_caller(file)
@@ -196,11 +264,15 @@ def kill_database_connection(conn):  # 9b+
 
 
 def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
-              hexa=False):
+              hexa=False, allobjects=False):
 
     # get the json decoded data
     fstructure = json.loads(get_structure(malpdf, exhaustive))
-    fcontents = get_contents_obj(malpdf, hexa)
+    if not allobjects:
+        (fcontents, raw_fcontents) = filter_suspect_objects(
+            get_indirect_objects(malpdf), SUSPECT_KEYWORDS)
+    else:
+        fcontents = get_contents_obj(malpdf, hexa)
     # TODO scoring
     # fscore = json.loads(get_scores(malpdf))
     fscore = "NotImplemented"
