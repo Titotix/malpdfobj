@@ -9,7 +9,7 @@ import urllib2
 import os
 import time
 import parser_hash2json
-import parser_contents2json
+import pdfparser
 import pdfid_mod
 import related_entropy
 import hashlib
@@ -19,6 +19,8 @@ import logging
 
 DEFAULTDUMPFILE = "malpdfobj_out.json"
 
+
+PDF_ELEMENT_INDIRECT_OBJECT = 2
 
 def main():
     oParser = argparse.ArgumentParser(description=__description__)
@@ -146,6 +148,7 @@ def get_scores(file):
     return scoreobj
 
 
+# C'est quoi cette fonction qui sert a RIEN !!
 def get_object_details(file):
     objdetails = parser_hash2json.conversion(file)
     return objdetails
@@ -158,9 +161,25 @@ def get_hash_obj(file):
 
 
 def get_contents_obj(file, hexa):
-    objcontents = json.loads(parser_contents2json.contents(file, hexa))
+    objcontents = json.loads(get_contents(file, hexa))
     data = {'objects': objcontents}
     return json.dumps(data)
+
+def get_contents(file, hexa):
+    oPDFParser = pdfparser.cPDFParser(file)
+    content_json_objs = []
+
+    while True:
+        object = oPDFParser.GetObject()
+        if object != None:
+            if object.type == PDF_ELEMENT_INDIRECT_OBJECT:
+                content_json_objs.append(pdfparser.content2JSON(object, hexa))
+        else:
+            break
+
+    data = {'object': content_json_objs}
+    result = json.dumps(data)
+    return result
 
 
 def get_related_files(file):
@@ -208,7 +227,6 @@ def build_obj(malpdf, vt=False, wepawet=False, hashes=False, exhaustive=False,
         fobj["hash_data"] = fhashes
 
     return json.dumps(fobj)
-
 
 if __name__ == '__main__':
     main()
