@@ -110,10 +110,11 @@ def main():
         con.insert(output)
     elif options.file:
         dump_fh = open(dumpfile, 'w')
-        dump_fh.write(json.dumps(output))
+        dump_fh.write(json.dumps(output).decode("string_escape"))
         dump_fh.close()
     else:
-        print(output)
+        for line in json.dumps(output).decode("string_escape"):
+            sys.stdout.write(line)
 
 
 def get_vt_obj(file):
@@ -220,6 +221,7 @@ def filter_suspect_objects(indirect_objects, suspect_keywords):
         for word in suspect_keywords:
             if obj.Contains(word):
                 suspect_objects.append(obj)
+                break
 
     for obj in suspect_objects:
         references = obj.GetReferences()
