@@ -1,4 +1,5 @@
 
+
 == Purpose ==
 This is a bunch of tools chained together to provide a JSON object that represents various pieces of a malicious PDF file. 
 
@@ -6,16 +7,24 @@ This is a bunch of tools chained together to provide a JSON object that represen
 http://blog.9bplus.com
 
 == Usage ==
-Usage: object_builder.py [options]
-Builds JSON object representing a malicious PDF
+usage: object_builder.py [options] PDFfile
 
-Options:
-  --version             show program's version number and exit
+positional arguments:
+  PDFfile               PDF file to build an object from
+
+optional arguments:
   -h, --help            show this help message and exit
-  -f FILE, --file=FILE  file to build an object from
-  -d DIR, --dir=DIR     dir to build an object from
+  -f FILE, --file FILE  file to dump results in JSON format
   -m, --mongo           dump to a mongodb database
-  -v, --verbose         verbose outpout
+  -v, --verbose         verbose log output
+  -x, --exhaustive      exhaustive output of the tool
+  -l, --log             log to provided file
+  -X, --hexa            Provide also streams in hexadecimal representations
+  -V, --virustotal      Use VirusTotal API to get info from provided pdf
+  -H, --hashes          Computes hashes for provided file
+  -W, --wepawet         Not implemented.
+  -a, --all             Dump all objects from PDF (Implies high volume of
+                        ouput)
 
 == Sample Output == 
 {
@@ -396,3 +405,6 @@ Options:
     }
 }
 
+== Author ==
+
+Inital code from Brandon Dixion, reworked by Thibault Marquand
